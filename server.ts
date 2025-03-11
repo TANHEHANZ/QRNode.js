@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import PDFDocument from "pdfkit";
 
 const app = express();
-
+app.use(express.json({ limit: "50mb" }));
 const PORT = 3200;
 
 app.get("/prueba", (req, res) => {
@@ -32,21 +32,30 @@ app.get("/qr", async (req, res) => {
   }
 });
 
-app.get("/qr-pdf", async (req, res) => {
+app.post("/qr-pdf", async (req: Request, res: Response): Promise<void> => {
   try {
-    const url = req.query.url || "https://example.com";
-    const qrImage = await QRCode.toDataURL(url.toString());
+    const { pdfBase64, url } = req.body;
+
+    if (!pdfBase64) {
+      return res.status(400).send("No PDF data provided");
+    }
+
+    const qrImage = await QRCode.toDataURL(url || "https://example.com");
+    const pdfBuffer = Buffer.from(pdfBase64, "base64");
 
     const doc = new PDFDocument();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=qr-code.pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=qr-code-modified.pdf"
+    );
 
     doc.pipe(res);
 
-    doc.fontSize(20).text("Your QR Code", 50, 50);
-
+    // Add QR code
     const qrBuffer = Buffer.from(qrImage.split(",")[1], "base64");
 
+    doc.fontSize(20).text("QR Code", 50, 50);
     doc.image(qrBuffer, {
       fit: [250, 250],
       align: "center",
@@ -54,16 +63,16 @@ app.get("/qr-pdf", async (req, res) => {
     });
 
     doc.moveDown();
-    doc.fontSize(12).text(url.toString(), {
+    doc.fontSize(12).text(url || "https://example.com", {
       align: "center",
     });
 
     doc.end();
   } catch (err) {
-    res.status(500).send("Error generating PDF with QR code");
+    console.error(err);
+    res.status(500).send("Error processing PDF with QR code");
   }
 });
-
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
 });

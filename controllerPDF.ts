@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
-import { PDFDocument as PDFLib } from "pdf-lib";
+import { PDFDocument as PDFLib, rgb, degrees } from "pdf-lib";
 
 export const pdf = async (req: Request, res: Response) => {
   try {
@@ -10,6 +10,7 @@ export const pdf = async (req: Request, res: Response) => {
       url,
       position = { x: 0, y: 0 },
       widthQR = { w: 0, h: 0 },
+      selloText = "Documento firmado Digitalmente",
     } = req.body;
 
     if (!pdfBase64) {
@@ -29,16 +30,39 @@ export const pdf = async (req: Request, res: Response) => {
 
     // Add QR code to each page
     const pages = pdfDoc.getPages();
+    const currentDate = new Date().toLocaleString();
     pages.forEach((page) => {
       const { width, height } = page.getSize();
+      const qrWidth = widthQR.w || 100;
+      const qrHeight = widthQR.h || 100;
+
+      // Draw QR code
       page.drawImage(qrImageEmbed, {
         x: position.x,
-        y: height - position.y - 100, // Adjust size as needed
-        width: widthQR.w || 100, // QR code width
-        height: widthQR.h || 100, // QR code height
+        y: height - position.y - qrHeight,
+        width: qrWidth,
+        height: qrHeight,
+      });
+
+      page.drawText(selloText, {
+        x: position.x + 30,
+        y: height - position.y + 10,
+        size: 18,
+        color: rgb(0, 0, 0),
+        rotate: degrees(90),
+        maxWidth: 180,
+      });
+
+      page.drawText(`Generado: ${currentDate}`, {
+        x: position.x + qrWidth - 20,
+        y: height - position.y + 10,
+
+        size: 8,
+        color: rgb(0, 0, 0),
+        rotate: degrees(90),
+        maxWidth: 300,
       });
     });
-
     const modifiedPdfBytes = await pdfDoc.save();
 
     res.setHeader("Content-Type", "application/pdf");

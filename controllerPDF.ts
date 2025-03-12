@@ -5,18 +5,22 @@ import { PDFDocument as PDFLib } from "pdf-lib";
 
 export const pdf = async (req: Request, res: Response) => {
   try {
-    const { pdfBase64, url, position = { x: 0, y: 0 } } = req.body;
+    const {
+      pdfBase64,
+      url,
+      position = { x: 0, y: 0 },
+      widthQR = { w: 0, h: 0 },
+    } = req.body;
 
     if (!pdfBase64) {
       res.status(400).send("No PDF data provided");
       return;
     }
 
-    // Create QR code
-    const qrImage = await QRCode.toDataURL(url || "https://example.com");
+    const qrImage = await QRCode.toDataURL(
+      url || "No se registro la url del documento"
+    );
     const pdfBuffer = Buffer.from(pdfBase64, "base64");
-
-    // Load the original PDF
     const pdfDoc = await PDFLib.load(pdfBuffer);
 
     // Convert QR code to PNG format
@@ -30,12 +34,11 @@ export const pdf = async (req: Request, res: Response) => {
       page.drawImage(qrImageEmbed, {
         x: position.x,
         y: height - position.y - 100, // Adjust size as needed
-        width: 100, // QR code width
-        height: 100, // QR code height
+        width: widthQR.w || 100, // QR code width
+        height: widthQR.h || 100, // QR code height
       });
     });
 
-    // Save and send the modified PDF
     const modifiedPdfBytes = await pdfDoc.save();
 
     res.setHeader("Content-Type", "application/pdf");

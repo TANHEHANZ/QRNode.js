@@ -34,3 +34,11 @@ Adds a QR code signature to a PDF document.
   "selloText": "Document Verification"
 }
 ```
+
+ejecutar servidor
+
+```bash
+
+npm start
+
+```
